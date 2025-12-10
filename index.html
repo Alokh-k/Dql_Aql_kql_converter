@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced SIEM Query Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-chevron {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #94a3b8;
+        }
+
+        /* Language Toggle Switch */
+        .lang-switch {
+            background: #1e293b;
+            border-radius: 999px;
+            padding: 4px;
+            display: inline-flex;
+            position: relative;
+        }
+
+        .lang-btn {
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .lang-active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .lang-inactive {
+            color: #64748b;
+        }
+
+        .lang-inactive:hover {
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex justify-center p-4 md:p-8">
+
+    <div class="w-full max-w-4xl space-y-8">
+
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1
+                class="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                Advanced Query Builder v2
+            </h1>
+            <p class="text-slate-400">Generate Dnif DQL, IBM AQL, or Microsoft KQL for Security Operations</p>
+        </div>
+
+        <!-- Main Interface -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl">
+
+            <!-- Top Bar -->
+            <div class="flex flex-col md:flex-row justify-between items-center p-6 border-b border-slate-800 gap-4">
+                <div class="bg-slate-950 p-1 rounded-lg flex border border-slate-800">
+                    <button id="tab-visual"
+                        class="py-1.5 px-4 rounded-md text-sm font-medium transition-all flex items-center gap-2 bg-slate-800 text-white border border-slate-700">Visual
+                        Builder</button>
+                    <button id="tab-natural"
+                        class="py-1.5 px-4 rounded-md text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-white border border-transparent">Natural
+                        Language</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs uppercase font-bold text-slate-500 tracking-wider">Output:</span>
+                    <div class="lang-switch">
+                        <div id="lang-dql" class="lang-btn lang-active">DQL</div>
+                        <div id="lang-aql" class="lang-btn lang-inactive">AQL</div>
+                        <div id="lang-kql" class="lang-btn lang-inactive">KQL</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 md:p-8">
+
+                <!-- MODE: Visual Builder -->
+                <div id="mode-visual" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <!-- Stream (Expanded) -->
+                        <div class="md:col-span-2 flex flex-col gap-2">
+                            <label class="text-sm font-medium text-slate-400">Data Stream / Log Source</label>
+                            <div class="select-wrapper">
+                                <select id="inp-stream"
+                                    class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <optgroup label="Network & Security">
+                                        <option value="authentication">Authentication / SigninLogs</option>
+                                        <option value="firewall">Firewall / CommonSecurityLog</option>
+                                        <option value="endpoint">Endpoint / DeviceEvents</option>
+                                        <option value="dns">DNS / DnsEvents</option>
+                                    </optgroup>
+                                    <optgroup label="Cloud">
+                                        <option value="aws_cloudtrail">AWS CloudTrail</option>
+                                        <option value="azure_activity">Azure Activity</option>
+                                        <option value="office365">Office 365 / Exchange</option>
+                                    </optgroup>
+                                    <optgroup label="System">
+                                        <option value="process">Process Execution</option>
+                                        <option value="file_system">File System Changes</option>
+                                        <option value="registry">Registry Events</option>
+                                    </optgroup>
+                                </select>
+                                <div class="select-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Action (Expanded) -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-slate-400">Action / Event ID</label>
+                            <div class="select-wrapper">
+                                <select id="inp-action"
+                                    class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">Any Action</option>
+                                    <optgroup label="Access">
+                                        <option value="Login">Login / Logon</option>
+                                        <option value="Logout">Logout / Logoff</option>
+                                        <option value="Failed Login">Failed Login</option>
+                                    </optgroup>
+                                    <optgroup label="Network">
+                                        <option value="Accept">Allow / Accept</option>
+                                        <option value="Deny">Block / Deny</option>
+                                        <option value="Connect">Connect</option>
+                                    </optgroup>
+                                    <optgroup label="File & Process">
+                                        <option value="FileCreate">File Created</option>
+                                        <option value="FileDelete">File Deleted</option>
+                                        <option value="ProcessStart">Process Started</option>
+                                        <option value="ProcessStop">Process Stopped</option>
+                                    </optgroup>
+                                    <optgroup label="Account Management">
+                                        <option value="UserCreated">User Account Created</option>
+                                        <option value="UserDeleted">User Account Deleted</option>
+                                        <option value="PasswordChanged">Password Changed</option>
+                                    </optgroup>
+                                </select>
+                                <div class="select-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-slate-400">Status / Severity</label>
+                            <div class="select-wrapper">
+                                <select id="inp-status"
+                                    class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">Any Status</option>
+                                    <option value="success">Success / Info</option>
+                                    <option value="failed">Failed / Warning</option>
+                                    <option value="error">Error / Critical</option>
+                                </select>
+                                <div class="select-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Duration -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-slate-400">Time Duration</label>
+                            <div class="select-wrapper">
+                                <select id="inp-duration"
+                                    class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">None</option>
+                                    <option value="15" selected>Last 15 Minutes</option>
+                                    <option value="60">Last 1 Hour</option>
+                                    <option value="1440">Last 24 Hours</option>
+                                    <option value="10080">Last 7 Days</option>
+                                    <option value="43200">Last 30 Days</option>
+                                </select>
+                                <div class="select-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg></div>
+                            </div>
+                        </div>
+
+                        <!-- Aggregation (Expanded) -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-slate-400">Analysis & Grouping</label>
+                            <div class="select-wrapper">
+                                <select id="inp-agg"
+                                    class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">Raw Data (List Events)</option>
+                                    <option value="count">Count Total Events</option>
+                                    <option value="uniq_user">Unique Users</option>
+                                    <optgroup label="Group By (Top Talkers)">
+                                        <option value="group_srcip">Group by Source IP</option>
+                                        <option value="group_dstip">Group by Destination IP</option>
+                                        <option value="group_user">Group by User Account</option>
+                                        <option value="group_country">Group by Country</option>
+                                    </optgroup>
+                                </select>
+                                <div class="select-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE: Natural Language -->
+                <div id="mode-natural" class="space-y-6 hidden">
+                    <div class="space-y-4">
+                        <label class="block text-sm font-medium text-slate-300">
+                            Describe your query (supports new file/process actions)
+                        </label>
+                        <div class="relative">
+                            <textarea id="inp-nl"
+                                placeholder="Example: Show me file deletions in the last 24 hours grouped by user from the system stream"
+                                class="w-full h-32 bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"></textarea>
+                            <button id="btn-generate"
+                                class="absolute bottom-4 right-4 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg flex items-center gap-2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z">
+                                    </path>
+                                    <path d="m14 7 3 3"></path>
+                                    <path d="M5 6v4"></path>
+                                    <path d="M19 14v4"></path>
+                                    <path d="M10 2v2"></path>
+                                </svg>
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OUTPUT BLOCK -->
+                <div id="output-container"
+                    class="mt-8 bg-black rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+                    <div class="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800">
+                        <div
+                            class="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="4 17 10 11 4 5"></polyline>
+                                <line x1="12" y1="19" x2="20" y2="19"></line>
+                            </svg>
+                            <span id="output-label">Generated Command</span>
+                        </div>
+                        <button id="btn-copy"
+                            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-md transition-colors">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                    <div id="output-text"
+                        class="p-6 font-mono text-lg break-all leading-relaxed text-slate-200 whitespace-pre-wrap">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        let currentMode = 'visual';
+        let currentLang = 'dql';
+        let currentOutput = '';
+
+        // --- Elements ---
+        const tabVisual = document.getElementById('tab-visual');
+        const tabNatural = document.getElementById('tab-natural');
+        const modeVisual = document.getElementById('mode-visual');
+        const modeNatural = document.getElementById('mode-natural');
+        const langDql = document.getElementById('lang-dql');
+        const langAql = document.getElementById('lang-aql');
+        const langKql = document.getElementById('lang-kql');
+        const outputLabel = document.getElementById('output-label');
+        const outputText = document.getElementById('output-text');
+        const btnCopy = document.getElementById('btn-copy');
+        const btnGenerate = document.getElementById('btn-generate');
+        const inpNl = document.getElementById('inp-nl');
+
+        const inputs = {
+            stream: document.getElementById('inp-stream'),
+            action: document.getElementById('inp-action'),
+            status: document.getElementById('inp-status'),
+            duration: document.getElementById('inp-duration'),
+            agg: document.getElementById('inp-agg')
+        };
+
+        // --- MAPPINGS ---
+        const AQL_MAP = {
+            'authentication': "devicetype='12' OR devicetype='Authentication'", // Example IDs
+            'firewall': "devicetype='Firewall' OR devicetype='FW'",
+            'aws_cloudtrail': "logsourceid matches 'AWS.*'",
+            'process': "eventid='Process Create'",
+            'group_srcip': 'sourceip',
+            'group_dstip': 'destinationip',
+            'group_user': 'username',
+            'group_country': 'geographic_location(sourceip)'
+        };
+
+        const KQL_MAP = {
+            'authentication': 'SigninLogs',
+            'firewall': 'CommonSecurityLog',
+            'endpoint': 'DeviceEvents',
+            'webserver': 'W3CIISLog',
+            'dns': 'DnsEvents',
+            'aws_cloudtrail': 'AWSCloudTrail',
+            'azure_activity': 'AzureActivity',
+            'office365': 'OfficeActivity',
+            'process': 'DeviceProcessEvents',
+            'file_system': 'DeviceFileEvents',
+            // Aggregation fields
+            'group_srcip': 'IPAddress',
+            'group_dstip': 'DestinationIPAddress',
+            'group_user': 'UserPrincipalName',
+            'group_country': 'Location'
+        };
+
+        // --- BUILDERS ---
+
+        function buildDQL(params) {
+            let dql = `streams=${params.stream}`;
+
+            let conds = [];
+            if (params.action) conds.push(`action="${params.action}"`);
+            if (params.status) conds.push(`status="${params.status}"`);
+            if (conds.length > 0) dql += ` where ${conds.join(' and ')}`;
+
+            let pipes = [];
+            // Time
+            const mins = parseInt(params.duration);
+            if (mins) {
+                if (mins >= 1440) pipes.push(`duration ${mins / 1440}d`);
+                else if (mins >= 60) pipes.push(`duration ${mins / 60}h`);
+                else pipes.push(`duration ${mins}m`);
+            }
+
+            // Aggregations
+            if (params.agg === 'count') pipes.push('count');
+            else if (params.agg === 'uniq_user') pipes.push('uniq $User');
+            else if (params.agg.startsWith('group_')) {
+                // Dnif grouping usually involves `group` directive
+                let field = '$SrcIP';
+                if (params.agg === 'group_dstip') field = '$DstIP';
+                if (params.agg === 'group_user') field = '$User';
+                if (params.agg === 'group_country') field = '$GeoCountry';
+
+                pipes.push(`group ${field}`);
+                pipes.push('limit 10');
+            } else {
+                // Default Limit
+                pipes.push('limit 100');
+            }
+
+            if (pipes.length > 0) dql += ` | ${pipes.join(' | ')}`; // Dnif often uses pipes for each step
+            return dql;
+        }
+
+        function buildAQL(params) {
+            let select = 'SELECT *';
+            let groupBy = '';
+
+            // Handle Aggregation
+            if (params.agg === 'count') select = 'SELECT count(*)';
+            else if (params.agg === 'uniq_user') select = 'SELECT UNIQUECOUNT(username)';
+            else if (params.agg.startsWith('group_')) {
+                let field = AQL_MAP[params.agg] || 'sourceip';
+                select = `SELECT ${field}, count(*)`;
+                groupBy = `GROUP BY ${field}`;
+            }
+
+            let aql = `${select} FROM events`;
+
+            // Conditions
+            let conds = [];
+            // Map stream to approximate AQL logic
+            if (AQL_MAP[params.stream]) conds.push(`(${AQL_MAP[params.stream]})`);
+            else conds.push(`logsource='${params.stream}'`);
+
+            if (params.action) conds.push(`"Action"='${params.action}'`);
+            if (params.status) conds.push(`"Status"='${params.status}'`);
+
+            if (conds.length > 0) aql += `\nWHERE ${conds.join(' AND ')}`;
+            if (groupBy) aql += `\n${groupBy}`;
+
+            // Limit & Time
+            if (!params.agg.startsWith('group_')) aql += `\nLIMIT 100`;
+            if (params.duration) aql += `\nLAST ${params.duration} MINUTES`;
+
+            return aql;
+        }
+
+        function buildKQL(params) {
+            let kql = KQL_MAP[params.stream] || params.stream;
+
+            // Time
+            const mins = parseInt(params.duration);
+            if (mins) {
+                let dur = mins < 60 ? `${mins}m` : (mins / 60) + 'h';
+                if (mins >= 1440) dur = (mins / 1440) + 'd';
+                kql += `\n| where TimeGenerated > ago(${dur})`;
+            }
+
+            // Conditions
+            if (params.action) kql += `\n| where ActionType == "${params.action}"`;
+            if (params.status) kql += `\n| where ResultType == "${params.status}"`;
+
+            // Aggregation
+            if (params.agg === 'count') {
+                kql += `\n| summarize Total=count()`;
+            } else if (params.agg === 'uniq_user') {
+                kql += `\n| summarize UniqueUsers=dcount(UserPrincipalName)`;
+            } else if (params.agg.startsWith('group_')) {
+                let field = KQL_MAP[params.agg] || 'IPAddress';
+                kql += `\n| summarize Count=count() by ${field}\n| top 10 by Count`;
+            } else {
+                kql += `\n| take 100`;
+            }
+
+            return kql;
+        }
+
+        // --- RENDER & LOGIC ---
+
+        function renderOutput(text, lang) {
+            currentOutput = text;
+            let html = text;
+
+            if (lang === 'dql') {
+                // DQL Highlighting
+                html = html.replace(/streams=/g, '<span class="text-purple-400">streams=</span>')
+                    .replace(/where/g, '<span class="text-blue-400">where</span>')
+                    .replace(/\|/g, '<span class="text-orange-400">|</span>');
+            } else if (lang === 'aql') {
+                // AQL Highlighting
+                ['SELECT', 'FROM', 'WHERE', 'AND', 'LAST', 'MINUTES', 'LIMIT', 'GROUP BY'].forEach(kw => {
+                    html = html.replace(new RegExp(`\\b${kw}\\b`, 'g'), `<span class="text-blue-400 font-bold">${kw}</span>`);
+                });
+            } else if (lang === 'kql') {
+                // KQL Highlighting
+                html = html.replace(/\|/g, '<span class="text-orange-400">|</span>');
+                ['where', 'summarize', 'count', 'top', 'ago', 'take', 'by'].forEach(kw => {
+                    html = html.replace(new RegExp(`\\b${kw}\\b`, 'g'), `<span class="text-cyan-400 font-bold">${kw}</span>`);
+                });
+            }
+            outputText.innerHTML = html;
+        }
+
+        function getParams() {
+            return {
+                stream: inputs.stream.value,
+                action: inputs.action.value,
+                status: inputs.status.value,
+                duration: inputs.duration.value,
+                agg: inputs.agg.value
+            };
+        }
+
+        function processVisual() {
+            const params = getParams();
+            let result = '';
+            if (currentLang === 'dql') result = buildDQL(params);
+            else if (currentLang === 'aql') result = buildAQL(params);
+            else if (currentLang === 'kql') result = buildKQL(params);
+            renderOutput(result, currentLang);
+        }
+
+        function processNatural() {
+            const text = inpNl.value.toLowerCase();
+            let p = { stream: 'authentication', action: '', status: '', duration: '15', agg: '' };
+
+            // Stream Detection
+            if (text.includes('firewall')) p.stream = 'firewall';
+            if (text.includes('endpoint')) p.stream = 'endpoint';
+            if (text.includes('cloud') || text.includes('aws')) p.stream = 'aws_cloudtrail';
+            if (text.includes('file') || text.includes('system')) p.stream = 'file_system';
+            if (text.includes('process')) p.stream = 'process';
+
+            // Action
+            if (text.includes('login')) p.action = 'Login';
+            if (text.includes('fail')) p.status = 'failed';
+            if (text.includes('delete') || text.includes('deletion')) p.action = 'FileDelete';
+            if (text.includes('create') || text.includes('creation')) p.action = 'FileCreate';
+
+            // Aggregation
+            if (text.includes('group by user')) p.agg = 'group_user';
+            else if (text.includes('group by ip') || text.includes('source ip')) p.agg = 'group_srcip';
+            else if (text.includes('count')) p.agg = 'count';
+
+            // Time
+            if (text.includes('24 hours') || text.includes('day')) p.duration = '1440';
+            if (text.includes('hour') && !text.includes('24')) p.duration = '60';
+
+            let result = '';
+            if (currentLang === 'dql') result = buildDQL(p);
+            else if (currentLang === 'aql') result = buildAQL(p);
+            else if (currentLang === 'kql') result = buildKQL(p);
+            renderOutput(result, currentLang);
+        }
+
+        function updateAll() {
+            const labels = { 'dql': 'Dnif DQL', 'aql': 'IBM AQL', 'kql': 'Microsoft KQL' };
+            outputLabel.innerText = `Generated ${labels[currentLang]}`;
+            if (currentMode === 'visual') processVisual();
+            else if (inpNl.value) processNatural();
+            else renderOutput('<span class="text-slate-600 italic">Ready to generate...</span>', 'none');
+        }
+
+        // --- Event Listeners ---
+        function setMode(mode) {
+            currentMode = mode;
+            if (mode === 'visual') {
+                modeVisual.classList.remove('hidden'); modeNatural.classList.add('hidden');
+                tabVisual.classList.replace('text-slate-400', 'bg-slate-800');
+                tabVisual.classList.replace('border-transparent', 'text-white');
+                tabNatural.classList.replace('bg-slate-800', 'text-slate-400');
+            } else {
+                modeVisual.classList.add('hidden'); modeNatural.classList.remove('hidden');
+                tabNatural.classList.replace('text-slate-400', 'bg-slate-800');
+                tabNatural.classList.replace('border-transparent', 'text-white');
+                tabVisual.classList.replace('bg-slate-800', 'text-slate-400');
+            }
+            updateAll();
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            [langDql, langAql, langKql].forEach(el => el.className = "lang-btn lang-inactive");
+            document.getElementById(`lang-${lang}`).className = "lang-btn lang-active";
+            updateAll();
+        }
+
+        tabVisual.onclick = () => setMode('visual');
+        tabNatural.onclick = () => setMode('natural');
+        langDql.onclick = () => setLang('dql');
+        langAql.onclick = () => setLang('aql');
+        langKql.onclick = () => setLang('kql');
+
+        Object.values(inputs).forEach(i => i.onchange = updateAll);
+        btnGenerate.onclick = processNatural;
+
+        btnCopy.onclick = () => {
+            if (!currentOutput) return;
+            const t = document.createElement("textarea");
+            t.value = currentOutput.replace(/<[^>]*>/g, '');
+            document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t);
+            const old = btnCopy.innerHTML;
+            btnCopy.innerHTML = `<span class="text-emerald-400">Copied!</span>`;
+            setTimeout(() => btnCopy.innerHTML = old, 1500);
+        };
+
+        updateAll();
+    </script>
+</body>
+
+</html>
